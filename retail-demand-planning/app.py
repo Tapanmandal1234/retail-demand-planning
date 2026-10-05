@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 # ============================================================
 
 st.set_page_config(
-    page_title="Retail Demand Planning | Tapan Mandal",
+    page_title="Retail Demand Planning ",
     layout="wide",
     initial_sidebar_state="expanded",
 )
