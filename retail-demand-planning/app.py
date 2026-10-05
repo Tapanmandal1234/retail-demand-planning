@@ -5,42 +5,34 @@ import streamlit as st
 
 # 1. Page Configuration
 st.set_page_config(
-    page_title="Retail Demand Planning",
+    page_title="Retail Demand Planning ",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # 2. Aggressive Custom CSS for Futuristic / Editorial UI
-st.markdown(
-    """
-    
-    """,
-    unsafe_allow_html=True,
-)
+custom_css = """
+
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
 
 # 3. Chapter 1: The Context
-st.markdown('
-01 / RETAIL STRATEGY & FORECASTING
+st.markdown(""" 01 / RETAIL STRATEGY & FORECASTING
 
-', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 st.title("Fashion Demand Planning")
 st.markdown(
 """
-
-Historical sales data only tells you what happened, not what to do next. This engine processes 5 years of historical item performance to forecast demand, calculates a custom Growth × Demand × Volatility index, and translates the math into explicit commercial planning decisions.
-
-""",
+Historical sales data only tells you what happened, not what to do next. This engine processes historical item performance to forecast demand, calculates a custom Growth × Demand × Volatility index, and translates the math into explicit commercial planning decisions.""",
 unsafe_allow_html=True,
 )
 
-THE REAL DATA ENGINE
+# 4. THE REAL DATA ENGINE
 @st.cache_data
 def load_and_process_real_data():
 try:
-# 1. Read the real Kaggle CSV file
-df_raw = pd.read_csv('train.csv', parse_dates=['date'])
-
-    # 2. Separate recent 90 days vs previous 90 days to find actual Growth Momentum
+# Read the real Kaggle CSV file
+df_raw = pd.read_csv('train.csv', parse_dates=['date'])# Separate recent 90 days vs previous 90 days to find actual Growth Momentum
     max_date = df_raw['date'].max()
     recent_cutoff = max_date - pd.Timedelta(days=90)
     older_cutoff = recent_cutoff - pd.Timedelta(days=90)
@@ -48,24 +40,24 @@ df_raw = pd.read_csv('train.csv', parse_dates=['date'])
     recent_sales = df_raw[df_raw['date'] > recent_cutoff].groupby('item')['sales'].sum()
     older_sales = df_raw[(df_raw['date'] > older_cutoff) & (df_raw['date'] <= recent_cutoff)].groupby('item')['sales'].sum()
     
-    # 3. Calculate Total Demand and Volatility (Standard Deviation / Mean)
+    # Calculate Total Demand and Volatility
     stats = df_raw.groupby('item').agg(
         total_demand=('sales', 'sum'),
         std_demand=('sales', 'std'),
         mean_demand=('sales', 'mean')
     )
     
-    # 4. Build the Final Output Table
+    # Build the Final Output Table
     summary = pd.DataFrame()
     summary['Item'] = 'Product ' + stats.index.astype(str)
     summary['Total Demand'] = stats['total_demand'].values
     summary['Volatility'] = (stats['std_demand'] / stats['mean_demand']).values
     summary['Growth Rate'] = ((recent_sales.values - older_sales.values) / (older_sales.values + 1e-5))
     
-    # 5. Composite Strategic Score
+    # Composite Strategic Score
     summary['Strategic Score'] = abs(summary['Growth Rate']) * summary['Total Demand'] / (summary['Volatility'] + 0.5)
     
-    # 6. Apply Commercial Decision Rules based on the real math
+    # Apply Commercial Decision Rules
     demand_70th = summary['Total Demand'].quantile(0.7)
     demand_30th = summary['Total Demand'].quantile(0.3)
     volatility_70th = summary['Volatility'].quantile(0.7)
@@ -82,7 +74,7 @@ df_raw = pd.read_csv('train.csv', parse_dates=['date'])
             
     summary['Planning Decision'] = summary.apply(make_decision, axis=1)
     
-    # Clean up the numbers for display
+    # Clean up the numbers
     summary['Growth Rate'] = summary['Growth Rate'].round(3)
     summary['Volatility'] = summary['Volatility'].round(3)
     summary['Strategic Score'] = summary['Strategic Score'].round(1)
@@ -90,16 +82,16 @@ df_raw = pd.read_csv('train.csv', parse_dates=['date'])
     return summary
     
 except FileNotFoundError:
-    st.error("🚨 Missing Data: Please upload 'train.csv' to your GitHub repository!")
+    st.error("🚨 Missing Data: Please upload 'train.csv' to your GitHub repository to see the real analysis!")
     st.stop()
-df = load_and_process_real_data()
 
-Sidebar Setup
-st.sidebar.markdown('
+df = load_and_process_real_data()
+# Sidebar Setup
+st.sidebar.markdown("""
 
 PLANNING PARAMETERS
 
-', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 selected_decision = st.sidebar.multiselect(
 "Active Decision Tags",
 options=["INCREASE", "MAINTAIN", "WATCH", "REDUCE"],
@@ -108,11 +100,11 @@ default=["INCREASE", "MAINTAIN", "WATCH", "REDUCE"],
 filtered_df = df[df["Planning Decision"].isin(selected_decision)]
 
 4. Chapter 2: The Macro View
-st.markdown('
+st.markdown("""
 
 I. THE MACRO VIEW
 
-', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 st.markdown("### Portfolio Signals")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -121,33 +113,33 @@ col2.metric("Growth Drivers", len(filtered_df[filtered_df["Planning Decision"] =
 col3.metric("High Volatility (Watch)", len(filtered_df[filtered_df["Planning Decision"] == "WATCH"]))
 col4.metric("Markdown Targets", len(filtered_df[filtered_df["Planning Decision"] == "REDUCE"]))
 
-st.markdown("
+st.markdown("""
 
 
 
-", unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 5. Chapter 3: The Execution Matrix
-st.markdown('
+st.markdown("""
 
 II. STRATEGIC POSITIONING
 
-', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 st.markdown("### Growth × Demand Matrix")
 st.markdown(
-'
+"""
 
 Mapping items by momentum and total volume. Bubble size represents the composite Strategic Score. Color denotes the system-recommended action.
 
-',
+""",
 unsafe_allow_html=True
 )
 
 color_map = {
-"INCREASE": "#00e5ff",  # Cyan
-"MAINTAIN": "#eee9df",  # Cream
-"WATCH": "#ffaa00",     # Amber
-"REDUCE": "#ff2a2a",    # Red
+"INCREASE": "#00e5ff",
+"MAINTAIN": "#eee9df",
+"WATCH": "#ffaa00",
+"REDUCE": "#ff2a2a",
 }
 
 fig = px.scatter(
@@ -172,17 +164,17 @@ yaxis=dict(showgrid=False, zeroline=True, zerolinecolor="rgba(255,255,255,0.2)")
 
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("
+st.markdown("""
 
 
-", unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 6. Chapter 4: Output Table
-st.markdown('
+st.markdown("""
 
 III. EXECUTION TABLE
 
-', unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 st.markdown("### Commercial Decision Output")
 
 def style_tags(val):
