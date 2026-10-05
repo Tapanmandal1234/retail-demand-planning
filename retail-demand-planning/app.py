@@ -18,11 +18,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 3. Chapter 1: The Context & Story
+# 3. Chapter 1: The Context
 st.markdown('
-
-```
-
 01 / RETAIL STRATEGY & FORECASTING
 
 ', unsafe_allow_html=True)
@@ -30,50 +27,74 @@ st.title("Fashion Demand Planning")
 st.markdown(
 """
 
-Historical sales data only tells you what happened, not what to do next. This engine processes product and store performance to forecast demand, calculates a custom **Growth × Demand × Volatility** index, and translates the math into explicit commercial planning decisions.
+Historical sales data only tells you what happened, not what to do next. This engine processes 5 years of historical item performance to forecast demand, calculates a custom Growth × Demand × Volatility index, and translates the math into explicit commercial planning decisions.
 
-```
 """,
 unsafe_allow_html=True,
-
-```
-
 )
 
-# Generate Data
-
+THE REAL DATA ENGINE
 @st.cache_data
-def load_data():
-np.random.seed(42)
-items = [f"ITEM_{i:03d}" for i in range(1, 41)]
-data = []
-for item in items:
-demand = np.random.randint(500, 5000)
-growth = np.random.uniform(-0.25, 0.35)
-volatility = np.random.uniform(0.1, 0.9)
+def load_and_process_real_data():
+try:
+# 1. Read the real Kaggle CSV file
+df_raw = pd.read_csv('train.csv', parse_dates=['date'])
 
-```
-    score = abs(growth) * demand / (volatility + 0.5)
-
-    if growth > 0.08 and demand > 2500:
-        decision = "INCREASE"
-    elif growth < -0.05 and demand < 1500:
-        decision = "REDUCE"
-    elif volatility > 0.65:
-        decision = "WATCH"
-    else:
-        decision = "MAINTAIN"
-
-    data.append([item, demand, round(growth, 3), round(volatility, 3), round(score, 1), decision])
+    # 2. Separate recent 90 days vs previous 90 days to find actual Growth Momentum
+    max_date = df_raw['date'].max()
+    recent_cutoff = max_date - pd.Timedelta(days=90)
+    older_cutoff = recent_cutoff - pd.Timedelta(days=90)
     
-return pd.DataFrame(data, columns=["Item", "Total Demand", "Growth Rate", "Volatility", "Strategic Score", "Planning Decision"])
+    recent_sales = df_raw[df_raw['date'] > recent_cutoff].groupby('item')['sales'].sum()
+    older_sales = df_raw[(df_raw['date'] > older_cutoff) & (df_raw['date'] <= recent_cutoff)].groupby('item')['sales'].sum()
+    
+    # 3. Calculate Total Demand and Volatility (Standard Deviation / Mean)
+    stats = df_raw.groupby('item').agg(
+        total_demand=('sales', 'sum'),
+        std_demand=('sales', 'std'),
+        mean_demand=('sales', 'mean')
+    )
+    
+    # 4. Build the Final Output Table
+    summary = pd.DataFrame()
+    summary['Item'] = 'Product ' + stats.index.astype(str)
+    summary['Total Demand'] = stats['total_demand'].values
+    summary['Volatility'] = (stats['std_demand'] / stats['mean_demand']).values
+    summary['Growth Rate'] = ((recent_sales.values - older_sales.values) / (older_sales.values + 1e-5))
+    
+    # 5. Composite Strategic Score
+    summary['Strategic Score'] = abs(summary['Growth Rate']) * summary['Total Demand'] / (summary['Volatility'] + 0.5)
+    
+    # 6. Apply Commercial Decision Rules based on the real math
+    demand_70th = summary['Total Demand'].quantile(0.7)
+    demand_30th = summary['Total Demand'].quantile(0.3)
+    volatility_70th = summary['Volatility'].quantile(0.7)
+    
+    def make_decision(row):
+        if row['Growth Rate'] > 0.05 and row['Total Demand'] > demand_70th:
+            return 'INCREASE'
+        elif row['Growth Rate'] < -0.05 and row['Total Demand'] < demand_30th:
+            return 'REDUCE'
+        elif row['Volatility'] > volatility_70th:
+            return 'WATCH'
+        else:
+            return 'MAINTAIN'
+            
+    summary['Planning Decision'] = summary.apply(make_decision, axis=1)
+    
+    # Clean up the numbers for display
+    summary['Growth Rate'] = summary['Growth Rate'].round(3)
+    summary['Volatility'] = summary['Volatility'].round(3)
+    summary['Strategic Score'] = summary['Strategic Score'].round(1)
+    
+    return summary
+    
+except FileNotFoundError:
+    st.error("🚨 Missing Data: Please upload 'train.csv' to your GitHub repository!")
+    st.stop()
+df = load_and_process_real_data()
 
-```
-
-df = load_data()
-
-# Sidebar Setup
-
+Sidebar Setup
 st.sidebar.markdown('
 
 PLANNING PARAMETERS
@@ -86,8 +107,7 @@ default=["INCREASE", "MAINTAIN", "WATCH", "REDUCE"],
 )
 filtered_df = df[df["Planning Decision"].isin(selected_decision)]
 
-# 4. Chapter 2: The Macro View (Metrics)
-
+4. Chapter 2: The Macro View
 st.markdown('
 
 I. THE MACRO VIEW
@@ -105,12 +125,9 @@ st.markdown("
 
 
 
-
-
 ", unsafe_allow_html=True)
 
-# 5. Chapter 3: The Execution (Visuals & Data)
-
+5. Chapter 3: The Execution Matrix
 st.markdown('
 
 II. STRATEGIC POSITIONING
@@ -126,13 +143,11 @@ Mapping items by momentum and total volume. Bubble size represents the composite
 unsafe_allow_html=True
 )
 
-# Futuristic Color Palette for the Tags
-
 color_map = {
-"INCREASE": "#00e5ff",  # Cyan (High Tech)
-"MAINTAIN": "#eee9df",  # Cream (Stable)
-"WATCH": "#ffaa00",     # Amber (Warning)
-"REDUCE": "#ff2a2a",    # Red (Danger/Cut)
+"INCREASE": "#00e5ff",  # Cyan
+"MAINTAIN": "#eee9df",  # Cream
+"WATCH": "#ffaa00",     # Amber
+"REDUCE": "#ff2a2a",    # Red
 }
 
 fig = px.scatter(
@@ -145,8 +160,6 @@ hover_name="Item",
 color_discrete_map=color_map,
 template="plotly_dark",
 )
-
-# Remove gridlines for a cleaner, editorial look
 
 fig.update_layout(
 plot_bgcolor="rgba(0,0,0,0)",
@@ -162,19 +175,15 @@ st.plotly_chart(fig, use_container_width=True)
 st.markdown("
 
 
-
 ", unsafe_allow_html=True)
 
-# 6. Chapter 4: Output & Tags
-
+6. Chapter 4: Output Table
 st.markdown('
 
 III. EXECUTION TABLE
 
 ', unsafe_allow_html=True)
 st.markdown("### Commercial Decision Output")
-
-# Function to physically color-code the dataframe tags
 
 def style_tags(val):
 colors = {
@@ -185,8 +194,6 @@ colors = {
 }
 return colors.get(val, '')
 
-# Apply styling to the dataframe before rendering
-
 styled_df = filtered_df.sort_values(by="Total Demand", ascending=False).style.map(
 style_tags, subset=['Planning Decision']
 )
@@ -196,7 +203,3 @@ styled_df,
 use_container_width=True,
 height=400,
 )
-
-```
-
-```
