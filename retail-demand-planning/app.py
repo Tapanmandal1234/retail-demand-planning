@@ -3,10 +3,10 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-# Page Configuration
+# Page Configuration (Fixed the typo here!)
 st.set_page_config(
     page_title="Retail Demand Planning | Tapan Mandal",
-    page_layout="wide",
+    layout="wide",
 )
 
 # Header Section
@@ -16,7 +16,7 @@ st.markdown("Using historical product and store performance to forecast demand, 
 
 st.markdown("---")
 
-# Load Mock Data
+# Generate Mock Data (We will replace this with real Kaggle data later!)
 @st.cache_data
 def load_data():
     np.random.seed(42)
