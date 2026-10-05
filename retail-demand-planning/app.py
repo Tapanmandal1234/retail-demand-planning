@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-# Page Configuration (Fixed the typo here!)
+# Page Configuration
 st.set_page_config(
     page_title="Retail Demand Planning | Tapan Mandal",
     layout="wide",
@@ -16,7 +16,7 @@ st.markdown("Using historical product and store performance to forecast demand, 
 
 st.markdown("---")
 
-# Generate Mock Data (We will replace this with real Kaggle data later!)
+# Generate Mock Data
 @st.cache_data
 def load_data():
     np.random.seed(42)
@@ -26,7 +26,9 @@ def load_data():
         demand = np.random.randint(500, 5000)
         growth = np.random.uniform(-0.15, 0.25)
         volatility = np.random.uniform(0.1, 0.8)
-        score = growth * demand / (volatility + 0.5)
+        
+        # We use absolute value here so the chart bubbles never get a negative size
+        score = abs(growth) * demand / (volatility + 0.5)
 
         if growth > 0.05 and demand > 2500:
             decision = "INCREASE"
